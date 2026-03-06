@@ -1,132 +1,140 @@
-import { useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-
-const mockReports = [
-    { id: 1, lat: 8.3114, lng: 80.4037, animal: " Elephant", location: "Kekirawa", type: "Crop Damage", time: "2 hours ago", severity: "high" },
-    { id: 2, lat: 7.9403, lng: 80.7718, animal: " Leopard", location: "Kandy", type: "Wildlife Sighting", time: "4 hours ago", severity: "low" },
-    { id: 3, lat: 8.5874, lng: 81.2152, animal: " Elephant", location: "Trincomalee", type: "Property Damage", time: "6 hours ago", severity: "high" },
-    { id: 4, lat: 6.9271, lng: 79.8612, animal: " Snake", location: "Colombo", type: "Human Injury", time: "1 day ago", severity: "medium" },
-    { id: 5, lat: 6.0535, lng: 80.2210, animal: " Crocodile", location: "Galle", type: "Wildlife Sighting", time: "1 day ago", severity: "medium" },
-    { id: 6, lat: 7.2906, lng: 80.6337, animal: " Bear", location: "Ratnapura", type: "Crop Damage", time: "2 days ago", severity: "high" },
-]
-
-const severityColor = {
-    high: "bg-red-500",
-    medium: "bg-yellow-500",
-    low: "bg-emerald-500",
-}
-
-export default function MapSection() {
-    const mapRef = useRef(null)
-    const mapInstanceRef = useRef(null)
-
-    useEffect(() => {
-        if (mapInstanceRef.current) return
-
-        const loadMap = async () => {
-            const L = await import("leaflet")
-            await import("leaflet/dist/leaflet.css")
-
-            const map = L.map(mapRef.current).setView([8.5, 80.7], 7)
-            mapInstanceRef.current = map
-
-            L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-                attribution: "©OpenStreetMap ©CartoDB",
-            }).addTo(map)
-
-            mockReports.forEach((report) => {
-                const color = report.severity === "high" ? "#ef4444" : report.severity === "medium" ? "#eab308" : "#22c55e"
-
-                const icon = L.divIcon({
-                    html: `<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px ${color}"></div>`,
-                    className: "",
-                    iconSize: [12, 12],
-                })
-
-                L.marker([report.lat, report.lng], { icon })
-                    .addTo(map)
-                    .bindPopup(`
-            <div style="background:#1c1917;color:white;padding:12px;border-radius:12px;min-width:180px;font-family:sans-serif">
-              <div style="font-size:18px">${report.animal}</div>
-              <div style="font-weight:bold;margin-top:4px">${report.location}</div>
-              <div style="color:#a8a29e;font-size:12px">${report.type}</div>
-              <div style="color:#6b7280;font-size:11px;margin-top:4px">${report.time}</div>
-            </div>
-          `)
-            })
-        }
-
-        loadMap()
-    }, [])
-
+export default function Footer() {
     return (
-        <section id="map" className="bg-stone-950 py-24 px-6">
+        <footer className="bg-stone-950 border-t border-stone-800 pt-16 pb-8 px-6">
             <div className="max-w-6xl mx-auto">
 
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="text-center mb-12"
-                >
-                    <span className="text-emerald-400 text-sm font-bold tracking-widest uppercase">
-                        Live Data
-                    </span>
-                    <h2 className="text-4xl md:text-5xl font-black text-white mt-3 mb-4">
-                        Conflict Hotspot Map
-                    </h2>
-                    <p className="text-stone-400 text-lg max-w-xl mx-auto">
-                        Real-time reports from communities across Sri Lanka.
-                    </p>
-                </motion.div>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-16">
 
-                {/* Legend */}
-                <div className="flex items-center justify-center gap-6 mb-6">
-                    {[
-                        { color: "bg-red-500", label: "High Severity" },
-                        { color: "bg-yellow-500", label: "Medium Severity" },
-                        { color: "bg-emerald-500", label: "Low Severity" },
-                    ].map((item) => (
-                        <div key={item.label} className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                            <span className="text-stone-400 text-sm">{item.label}</span>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Map */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8 }}
-                    className="rounded-3xl overflow-hidden border border-stone-800 shadow-2xl"
-                    style={{ height: "500px" }}
-                >
-                    <div ref={mapRef} style={{ height: "100%", width: "100%" }} />
-                </motion.div>
-
-                {/* Recent Reports List */}
-                <div className="grid md:grid-cols-3 gap-4 mt-8">
-                    {mockReports.slice(0, 3).map((report, i) => (
-                        <motion.div
-                            key={report.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.1 }}
-                            className="bg-stone-900 border border-stone-800 rounded-2xl p-4 flex items-start gap-3"
-                        >
-                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${severityColor[report.severity]}`} />
-                            <div>
-                                <div className="text-white font-semibold text-sm">{report.animal} — {report.location}</div>
-                                <div className="text-stone-500 text-xs mt-1">{report.type}</div>
-                                <div className="text-stone-600 text-xs mt-1">{report.time}</div>
+                    <div className="md:col-span-2">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-lg">
+                                C
                             </div>
-                        </motion.div>
-                    ))}
+                            <div>
+                                <span className="text-white font-black text-xl">Co</span>
+                                <span className="text-emerald-400 font-black text-xl">Exist</span>
+                                <span className="ml-2 text-xs text-stone-600 font-medium tracking-wider uppercase">Sri Lanka</span>
+                            </div>
+                        </div>
+                        <p className="text-stone-500 text-sm leading-relaxed mb-6 max-w-xs">
+                            A community-powered platform for reporting and tracking human-wildlife conflict
+                            across Sri Lanka. Protecting both people and nature since 2024.
+                        </p>
+                        <div className="flex items-center gap-2 mb-5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-emerald-400 text-xs font-medium">Platform Active — Reports Being Monitored</span>
+                        </div>
+                        <div className="flex gap-3 mt-2">
+                            <a href="https://github.com/isodharas/coexist-wildlife-reporter" target="_blank" rel="noreferrer"
+                                className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-emerald-500/20 border border-stone-700 hover:border-emerald-500/40 text-stone-400 hover:text-emerald-400 text-xs font-bold transition-all">
+                                GitHub
+                            </a>
+                            <a href="#" className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-400 text-xs font-bold transition-all">
+                                Twitter
+                            </a>
+                            <a href="#" className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-400 text-xs font-bold transition-all">
+                                LinkedIn
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 className="text-white font-bold text-sm mb-5 tracking-wide">Platform</h4>
+                        <ul className="space-y-3">
+                            <li><a href="#report" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Report Incident</a></li>
+                            <li><a href="#map" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Live Conflict Map</a></li>
+                            <li><a href="#mission" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Statistics</a></li>
+                            <li><a href="#safety" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Safety Guide</a></li>
+                            <li><a href="#about" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Our Mission</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="text-white font-bold text-sm mb-5 tracking-wide">Official Resources</h4>
+                        <ul className="space-y-3">
+                            <li>
+                                <a href="https://www.dwc.gov.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
+                                    Dept. of Wildlife Conservation
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.iucn.org/regions/asia/countries/sri-lanka" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
+                                    IUCN Sri Lanka
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.wwf.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
+                                    WWF Sri Lanka
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.forestdept.gov.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
+                                    Dept. of Forest Conservation
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.cea.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
+                                    Central Environmental Authority
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="text-white font-bold text-sm mb-5 tracking-wide">Emergency Contacts</h4>
+                        <div className="space-y-3">
+                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                                <p className="text-red-400 text-xs font-bold mb-1">Wildlife Emergency Hotline</p>
+                                <p className="text-white text-sm font-bold">+94 11 288 8585</p>
+                                <p className="text-stone-600 text-xs">Dept. of Wildlife Conservation</p>
+                                <p className="text-stone-600 text-xs">24 Hour Anti-Poaching Squad</p>
+                            </div>
+                            <div className="bg-stone-900 border border-stone-800 rounded-xl p-3">
+                                <p className="text-stone-400 text-xs font-bold mb-1">Forest Conservation Hotline</p>
+                                <p className="text-white text-sm font-bold">1991</p>
+                                <p className="text-stone-600 text-xs">Dept. of Forest Conservation</p>
+                            </div>
+                            <div className="bg-stone-900 border border-stone-800 rounded-xl p-3">
+                                <p className="text-stone-400 text-xs font-bold mb-1">DWC Head Office</p>
+                                <p className="text-white text-sm font-bold">+94 11 288 3355</p>
+                                <p className="text-stone-600 text-xs">Battaramulla, Sri Lanka</p>
+                            </div>
+                            <div className="pt-1">
+                                <p className="text-stone-600 text-xs mb-1">DWC Official Email</p>
+                                <p className="text-emerald-400 text-sm">dg@dwc.gov.lk</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <div className="bg-stone-900/50 border border-stone-800 rounded-2xl px-6 py-4 mb-8 flex flex-wrap gap-4 items-center justify-between">
+                    <p className="text-stone-600 text-xs font-medium tracking-wide uppercase">Built with</p>
+                    <div className="flex flex-wrap gap-3">
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">React + Vite</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Tailwind CSS</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Framer Motion</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Leaflet.js</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Flask</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Docker</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">AWS ECS</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">DynamoDB</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">CloudFront</span>
+                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">GitHub Actions</span>
+                    </div>
+                </div>
+
+                <div className="border-t border-stone-900 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+                    <p className="text-stone-700 text-xs">
+                        © 2026 CoExist Wildlife Reporter. All rights reserved. Built with love for Sri Lanka.
+                    </p>
+                    <div className="flex gap-6">
+                        <a href="#" className="text-stone-700 hover:text-stone-500 text-xs transition-colors">Privacy Policy</a>
+                        <a href="#" className="text-stone-700 hover:text-stone-500 text-xs transition-colors">Terms of Use</a>
+                        <a href="https://github.com/isodharas/coexist-wildlife-reporter" target="_blank" rel="noreferrer" className="text-stone-700 hover:text-stone-500 text-xs transition-colors">Open Source</a>
+                    </div>
+                </div>
+
             </div>
-        </section>
+        </footer>
     )
 }
