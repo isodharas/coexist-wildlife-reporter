@@ -1,140 +1,263 @@
-export default function Footer() {
+import { useEffect, useState } from "react"
+import { motion } from "framer-motion"
+
+
+const ANIMAL_COLORS = {
+    "Asian Elephant": "#f59e0b",
+    "Sri Lanka Leopard": "#ef4444",
+    "Sloth Bear": "#8b5cf6",
+    "Crocodile": "#06b6d4",
+    "Wild Boar": "#84cc16",
+    "Sambar Deer": "#fb923c",
+    "Other": "#6b7280",
+}
+
+// Fallback demo pins so the map always looks populated
+// even when the Flask API is offline
+const DEMO_REPORTS = [
+    { id: "d1", lat: 8.3114, lng: 80.4037, animal: "Asian Elephant", description: "Herd crossed paddy field", location: "Anuradhapura", severity: "High" },
+    { id: "d2", lat: 7.9403, lng: 80.7419, animal: "Asian Elephant", description: "Bull near village at night", location: "Polonnaruwa", severity: "High" },
+    { id: "d3", lat: 6.9271, lng: 79.8612, animal: "Sri Lanka Leopard", description: "Leopard spotted near school", location: "Colombo", severity: "Medium" },
+    { id: "d4", lat: 6.0535, lng: 80.2210, animal: "Crocodile", description: "Crocodile in irrigation canal", location: "Hambantota", severity: "Medium" },
+    { id: "d5", lat: 7.2906, lng: 80.6337, animal: "Asian Elephant", description: "Elephant raided crop store", location: "Kandy", severity: "High" },
+    { id: "d6", lat: 8.7514, lng: 80.5000, animal: "Sloth Bear", description: "Bear near rubber estate", location: "Vavuniya", severity: "Low" },
+    { id: "d7", lat: 6.8219, lng: 81.3384, animal: "Wild Boar", description: "Boars destroyed vegetable garden", location: "Monaragala", severity: "Low" },
+    { id: "d8", lat: 7.4818, lng: 80.3609, animal: "Asian Elephant", description: "Elephant broke electric fence", location: "Kurunegala", severity: "High" },
+    { id: "d9", lat: 8.5874, lng: 81.2152, animal: "Asian Elephant", description: "Herd of 12 near Trinco road", location: "Trincomalee", severity: "High" },
+    { id: "d10", lat: 6.5854, lng: 80.9842, animal: "Sri Lanka Leopard", description: "Leopard tracks near tea estate", location: "Badulla", severity: "Medium" },
+]
+
+export default function MapSection() {
+    const [reports, setReports] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [usingDemo, setUsingDemo] = useState(false)
+    const [mapReady, setMapReady] = useState(false)
+
+    // ── Step 1: Fetch real reports from Flask API ──────────────
+    useEffect(() => {
+        // Replace this URL with your current Cloudflare tunnel URL
+        // when Flask is running locally
+        const API_URL = "https://drinking-uses-combines-alert.trycloudflare.com/api/reports"
+
+        fetch(API_URL)
+            .then(res => res.json())
+            .then(data => {
+                const items = data.reports || data || []
+                if (items.length > 0) {
+                    setReports(items)
+                } else {
+                    // API returned empty — show demo data
+                    setReports(DEMO_REPORTS)
+                    setUsingDemo(true)
+                }
+                setLoading(false)
+            })
+            .catch(() => {
+                // API offline — show demo data so map always works
+                setReports(DEMO_REPORTS)
+                setUsingDemo(true)
+                setLoading(false)
+            })
+    }, [])
+
+    // ── Step 2: Load Leaflet and render map once data ready ────
+    useEffect(() => {
+        if (loading || mapReady) return
+
+        // Dynamically inject Leaflet CSS
+        if (!document.getElementById("leaflet-css")) {
+            const link = document.createElement("link")
+            link.id = "leaflet-css"
+            link.rel = "stylesheet"
+            link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            document.head.appendChild(link)
+        }
+
+        // Dynamically inject Leaflet JS
+        const script = document.createElement("script")
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        script.onload = () => {
+            const L = window.L
+
+            // Fix broken default marker icons in Leaflet + Vite
+            delete L.Icon.Default.prototype._getIconUrl
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+                iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+                shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+            })
+
+            // Create map centred on Sri Lanka
+            const map = L.map("coexist-map", {
+                center: [7.8731, 80.7718],
+                zoom: 7,
+                zoomControl: true,
+                scrollWheelZoom: false, // disable accidental scroll zoom
+            })
+
+            // Dark tile layer matching the site theme
+            L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+                maxZoom: 19,
+            }).addTo(map)
+
+            // Place a circle marker for each report
+            reports.forEach(report => {
+                const lat = parseFloat(report.lat || report.latitude)
+                const lng = parseFloat(report.lng || report.longitude)
+                if (isNaN(lat) || isNaN(lng)) return
+
+                const color = ANIMAL_COLORS[report.animal] || ANIMAL_COLORS["Other"]
+
+                // Outer pulse ring
+                L.circleMarker([lat, lng], {
+                    radius: 14,
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.12,
+                    weight: 1,
+                }).addTo(map)
+
+                // Inner solid dot
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 7,
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.9,
+                    weight: 2,
+                }).addTo(map)
+
+                // Popup on click
+                marker.bindPopup(`
+          <div style="font-family:sans-serif;min-width:180px">
+            <div style="font-weight:bold;font-size:13px;margin-bottom:4px;color:#${color.slice(1)}">${report.animal || "Unknown"}</div>
+            <div style="font-size:12px;color:#ccc;margin-bottom:6px">📍 ${report.location || "Sri Lanka"}</div>
+            <div style="font-size:12px;color:#aaa">${report.description || "No description"}</div>
+            ${report.severity ? `<div style="margin-top:6px;font-size:11px;color:#888">Severity: <b>${report.severity}</b></div>` : ""}
+          </div>
+        `, { className: "coexist-popup" })
+            })
+
+            setMapReady(true)
+        }
+        document.head.appendChild(script)
+    }, [loading, reports])
+
+    // ── Severity counts for the legend ─────────────────────────
+    const counts = {
+        total: reports.length,
+        high: reports.filter(r => r.severity === "High").length,
+        medium: reports.filter(r => r.severity === "Medium").length,
+        low: reports.filter(r => r.severity === "Low").length,
+    }
+
     return (
-        <footer className="bg-stone-950 border-t border-stone-800 pt-16 pb-8 px-6">
+        <section id="map" className="bg-stone-950 py-24 px-6">
             <div className="max-w-6xl mx-auto">
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-16">
-
-                    <div className="md:col-span-2">
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-black text-emerald-400 text-lg">
-                                C
-                            </div>
-                            <div>
-                                <span className="text-white font-black text-xl">Co</span>
-                                <span className="text-emerald-400 font-black text-xl">Exist</span>
-                                <span className="ml-2 text-xs text-stone-600 font-medium tracking-wider uppercase">Sri Lanka</span>
-                            </div>
-                        </div>
-                        <p className="text-stone-500 text-sm leading-relaxed mb-6 max-w-xs">
-                            A community-powered platform for reporting and tracking human-wildlife conflict
-                            across Sri Lanka. Protecting both people and nature since 2024.
-                        </p>
-                        <div className="flex items-center gap-2 mb-5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="text-emerald-400 text-xs font-medium">Platform Active — Reports Being Monitored</span>
-                        </div>
-                        <div className="flex gap-3 mt-2">
-                            <a href="https://github.com/isodharas/coexist-wildlife-reporter" target="_blank" rel="noreferrer"
-                                className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-emerald-500/20 border border-stone-700 hover:border-emerald-500/40 text-stone-400 hover:text-emerald-400 text-xs font-bold transition-all">
-                                GitHub
-                            </a>
-                            <a href="#" className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-400 text-xs font-bold transition-all">
-                                Twitter
-                            </a>
-                            <a href="#" className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-400 text-xs font-bold transition-all">
-                                LinkedIn
-                            </a>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h4 className="text-white font-bold text-sm mb-5 tracking-wide">Platform</h4>
-                        <ul className="space-y-3">
-                            <li><a href="#report" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Report Incident</a></li>
-                            <li><a href="#map" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Live Conflict Map</a></li>
-                            <li><a href="#mission" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Statistics</a></li>
-                            <li><a href="#safety" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Safety Guide</a></li>
-                            <li><a href="#about" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">Our Mission</a></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="text-white font-bold text-sm mb-5 tracking-wide">Official Resources</h4>
-                        <ul className="space-y-3">
-                            <li>
-                                <a href="https://www.dwc.gov.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
-                                    Dept. of Wildlife Conservation
-                                </a>
-                            </li>
-                            <li>
-                                <a href="https://www.iucn.org/regions/asia/countries/sri-lanka" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
-                                    IUCN Sri Lanka
-                                </a>
-                            </li>
-                            <li>
-                                <a href="https://www.wwf.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
-                                    WWF Sri Lanka
-                                </a>
-                            </li>
-                            <li>
-                                <a href="https://www.forestdept.gov.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
-                                    Dept. of Forest Conservation
-                                </a>
-                            </li>
-                            <li>
-                                <a href="https://www.cea.lk" target="_blank" rel="noreferrer" className="text-stone-500 hover:text-emerald-400 text-sm transition-colors">
-                                    Central Environmental Authority
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="text-white font-bold text-sm mb-5 tracking-wide">Emergency Contacts</h4>
-                        <div className="space-y-3">
-                            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
-                                <p className="text-red-400 text-xs font-bold mb-1">Wildlife Emergency Hotline</p>
-                                <p className="text-white text-sm font-bold">+94 11 288 8585</p>
-                                <p className="text-stone-600 text-xs">Dept. of Wildlife Conservation</p>
-                                <p className="text-stone-600 text-xs">24 Hour Anti-Poaching Squad</p>
-                            </div>
-                            <div className="bg-stone-900 border border-stone-800 rounded-xl p-3">
-                                <p className="text-stone-400 text-xs font-bold mb-1">Forest Conservation Hotline</p>
-                                <p className="text-white text-sm font-bold">1991</p>
-                                <p className="text-stone-600 text-xs">Dept. of Forest Conservation</p>
-                            </div>
-                            <div className="bg-stone-900 border border-stone-800 rounded-xl p-3">
-                                <p className="text-stone-400 text-xs font-bold mb-1">DWC Head Office</p>
-                                <p className="text-white text-sm font-bold">+94 11 288 3355</p>
-                                <p className="text-stone-600 text-xs">Battaramulla, Sri Lanka</p>
-                            </div>
-                            <div className="pt-1">
-                                <p className="text-stone-600 text-xs mb-1">DWC Official Email</p>
-                                <p className="text-emerald-400 text-sm">dg@dwc.gov.lk</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-stone-900/50 border border-stone-800 rounded-2xl px-6 py-4 mb-8 flex flex-wrap gap-4 items-center justify-between">
-                    <p className="text-stone-600 text-xs font-medium tracking-wide uppercase">Built with</p>
-                    <div className="flex flex-wrap gap-3">
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">React + Vite</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Tailwind CSS</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Framer Motion</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Leaflet.js</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Flask</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">Docker</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">AWS ECS</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">DynamoDB</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">CloudFront</span>
-                        <span className="text-stone-500 text-xs bg-stone-800 px-3 py-1 rounded-full border border-stone-700">GitHub Actions</span>
-                    </div>
-                </div>
-
-                <div className="border-t border-stone-900 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
-                    <p className="text-stone-700 text-xs">
-                        © 2026 CoExist Wildlife Reporter. All rights reserved. Built with love for Sri Lanka.
+                {/* Section header */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="text-center mb-12"
+                >
+                    <span className="text-emerald-400 text-sm font-bold tracking-widest uppercase">
+                        Live Data
+                    </span>
+                    <h2 className="text-4xl md:text-5xl font-black text-white mt-3 mb-4">
+                        Conflict Map
+                    </h2>
+                    <p className="text-stone-400 text-lg max-w-2xl mx-auto">
+                        Real-time reports from communities across Sri Lanka. Every pin is a story.
                     </p>
-                    <div className="flex gap-6">
-                        <a href="#" className="text-stone-700 hover:text-stone-500 text-xs transition-colors">Privacy Policy</a>
-                        <a href="#" className="text-stone-700 hover:text-stone-500 text-xs transition-colors">Terms of Use</a>
-                        <a href="https://github.com/isodharas/coexist-wildlife-reporter" target="_blank" rel="noreferrer" className="text-stone-700 hover:text-stone-500 text-xs transition-colors">Open Source</a>
-                    </div>
-                </div>
+
+                    {/* Demo mode warning */}
+                    {usingDemo && (
+                        <div className="mt-4 inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-400" />
+                            <span className="text-amber-400 text-xs font-medium">
+                                Showing demo data — Flask API offline. Start Flask to see live reports.
+                            </span>
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* Stats row above map */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="grid grid-cols-4 gap-3 mb-4"
+                >
+                    {[
+                        { label: "Total Reports", value: counts.total, color: "text-white" },
+                        { label: "High Severity", value: counts.high, color: "text-red-400" },
+                        { label: "Medium", value: counts.medium, color: "text-amber-400" },
+                        { label: "Low", value: counts.low, color: "text-emerald-400" },
+                    ].map(s => (
+                        <div key={s.label} className="bg-stone-900 border border-stone-800 rounded-xl p-4 text-center">
+                            <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                            <p className="text-stone-600 text-xs mt-1">{s.label}</p>
+                        </div>
+                    ))}
+                </motion.div>
+
+                {/* Map container */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    className="relative rounded-2xl overflow-hidden border border-stone-800"
+                    style={{ height: "520px" }}
+                >
+                    {/* Loading overlay */}
+                    {loading && (
+                        <div className="absolute inset-0 bg-stone-900 flex items-center justify-center z-10">
+                            <div className="text-center">
+                                <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                                <p className="text-stone-400 text-sm">Loading map data...</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Leaflet renders into this div */}
+                    <div id="coexist-map" className="w-full h-full" />
+                </motion.div>
+
+                {/* Legend */}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mt-4 flex flex-wrap gap-3 justify-center"
+                >
+                    {Object.entries(ANIMAL_COLORS).map(([animal, color]) => (
+                        <div key={animal} className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                            <span className="text-stone-500 text-xs">{animal}</span>
+                        </div>
+                    ))}
+                </motion.div>
 
             </div>
-        </footer>
+
+            {/* Custom popup styles */}
+            <style>{`
+        .coexist-popup .leaflet-popup-content-wrapper {
+          background: #1c2b20;
+          border: 1px solid #1f4d2a;
+          border-radius: 12px;
+          color: #ccc;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+        .coexist-popup .leaflet-popup-tip {
+          background: #1c2b20;
+        }
+        .leaflet-container {
+          background: #0a120c !important;
+        }
+      `}</style>
+        </section>
     )
 }

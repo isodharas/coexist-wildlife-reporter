@@ -109,7 +109,7 @@ export default function About() {
                     viewport={{ once: true }}
                     className="bg-gradient-to-r from-emerald-950/60 to-teal-950/60 border border-emerald-900/40 rounded-3xl p-10 flex flex-col md:flex-row items-center gap-8"
                 >
-                    <div className="w-24 h-24 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-5xl flex-shrink-0">
+                    <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 border border-emerald-500/30"><img src="/dinithi.jpg" alt="Dinithi Wijesinghe" className="w-full h-full object-cover object-top" />
 
                     </div>
                     <div className="text-center md:text-left">
